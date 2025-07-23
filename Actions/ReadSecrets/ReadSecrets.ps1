@@ -65,8 +65,20 @@ try {
             try {
                 $json = $secretValue | ConvertFrom-Json | ConvertTo-HashTable
             }
-            catch {
-                $json = @{}
+        # Look through installApps and installTestApps for secrets and add them to the collection of secrets to get
+        foreach($installSettingsKey in @('installApps','installTestApps')) {
+            if ($settings.Keys -contains $installSettingsKey) {
+                $settings."$installSettingsKey" | ForEach-Object {
+                    # If any of the installApps URLs contains '${{SECRETNAME}}' we need to get the secret
+                    $pattern = '.*(\$\{\{\s*([^}]+?)\s*\}\}).*'
+                    if ($_ -match $pattern) {
+                        $secretName = $matches[2]
+                        if ($secretsCollection -notcontains $secretName) {
+                            $secretsCollection += $secretName
+                        }
+                    }
+                }
+
             }
             if ($json.Keys.Count) {
                 # If secret is a JSON object, mask the individual values
